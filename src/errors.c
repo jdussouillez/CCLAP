@@ -9,7 +9,7 @@ cclap_err_t cclap_errno = CCLAP_SUCCESS;
 static const char* cclap_errmsg[] = {"Success",
 				     "NULL parameter",
 				     "System error", // Useless because we use errno to display the system error
-				     "Bad index",
+				     "Try to insert a duplicated option in list",
 				     "Bad short name",
 				     "Bad long name",
 				     "No names"};

@@ -97,7 +97,7 @@ void option_equals_TTP() {
   CU_ASSERT_EQUAL(cclap_errno, CCLAP_SUCCESS);
   FREE(opt1);
   FREE(opt2);
-  // optionval, only sortname -> true
+  // optionval, only shortname -> true
   opt1 = cclap_optionval_new('f', NULL, NULL, NULL);
   opt2 = cclap_optionval_new('f', NULL, NULL, NULL);
   CU_ASSERT_TRUE(cclap_option_equals(opt1, opt2));
@@ -596,7 +596,15 @@ void optionlist_add_TTF() {
   optionlist = cclap_optionlist_new();
   CU_ASSERT_FALSE(cclap_optionlist_add(optionlist, NULL));
   CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
-  //cclap_optionlist_destroy(&optionlist);
+  // Try to add a duplicate option
+  option = cclap_soption_new('v', NULL, NULL);
+  CU_ASSERT_TRUE(cclap_optionlist_add(optionlist, option));
+  CU_ASSERT_EQUAL(optionlist->size, 1);
+  CU_ASSERT_FALSE(cclap_optionlist_add(optionlist, option));
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_DUPOPT);
+  CU_ASSERT_EQUAL(optionlist->size, 1);
+  FREE(option);
+  cclap_optionlist_destroy(&optionlist);
 }
 
 void optionlist_destroy_TTF() {

@@ -12,7 +12,7 @@ typedef enum {
   CCLAP_SUCCESS = 0, // Success
   CCLAP_ERR_NULLVALUE, // A parameter is NULL
   CCLAP_ERR_SYSTEM, // A system error (malloc...)
-  CCLAP_ERR_BADINDEX, // Bad index (in optionlist)
+  CCLAP_ERR_DUPOPT, // Duplicated option (in optionlist)
   CCLAP_ERR_BADSNAME, // Bad short name
   CCLAP_ERR_BADLNAME, // Bad long name
   CCLAP_ERR_NONAMES // No names (short or long)

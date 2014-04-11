@@ -12,6 +12,13 @@ int cclap_optionlist_add(optionlist_t* list, option_t* opt) {
     cclap_errno = CCLAP_ERR_NULLVALUE;
     return 0;
   }
+  // Check for duplicates
+  CCLAP_OPTIONLIST_FOREACH(list, {
+      if (cclap_option_equals(option, opt)) {
+	cclap_errno = CCLAP_ERR_DUPOPT;
+	return 0;
+      }
+    });
   if ((node = malloc(sizeof(optionlistnode_t))) == NULL ||
       (node->option = malloc(sizeof(option_t))) == NULL) {
     cclap_errno = CCLAP_ERR_SYSTEM;
