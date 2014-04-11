@@ -4,10 +4,11 @@
 
 #include "cclap/errors.h"
 #include "cclap/option.h"
+#include "cclap/optionlist.h"
 
 #include "CUnit/Basic.h"
 
-#define DEBUG !0
+#define DEBUG 0
 
 #define FREE(p) do { free(p); p = NULL; } while (0)
 
@@ -463,6 +464,164 @@ void soption_new_TTF() {
   CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NONAMES);
 }
 
+/*
+ ***************************************************
+ ***************** OptionList suite ****************
+ ***************************************************
+ */
+/*
+ ********************************
+ * Test-to-pass
+ ********************************
+ */
+void optionlist_add_TTP() {
+  option_t* option;
+  optionlist_t* optionlist;
+  optionlist = cclap_optionlist_new();
+  // Valid soption, on an empty list
+  option = cclap_soption_new('v', NULL, NULL);
+  cclap_optionlist_add(optionlist, option);
+  FREE(option);
+  CU_ASSERT_EQUAL(optionlist->size, 1);
+  CU_ASSERT_EQUAL(optionlist->head->option->opt.sname, 'v');
+  CU_ASSERT_EQUAL(strlen(optionlist->head->option->opt.lname), 0);
+  CU_ASSERT_EQUAL(strlen(optionlist->head->option->opt.helpmsg), 0);
+  CU_ASSERT_FALSE(optionlist->head->option->opt.isset);
+  // Valid optionval, on a non-empty list
+  option = cclap_optionval_new('s', "size", NULL, NULL);
+  cclap_optionlist_add(optionlist, option);
+  FREE(option);
+  CU_ASSERT_EQUAL(optionlist->size, 2);
+  CU_ASSERT_EQUAL(optionlist->head->next->option->optv.opt.sname, 's');
+  CU_ASSERT_EQUAL(strcmp(optionlist->head->next->option->optv.opt.lname, "size"), 0);
+  CU_ASSERT_EQUAL(strlen(optionlist->head->next->option->optv.opt.helpmsg), 0);
+  CU_ASSERT_FALSE(optionlist->head->next->option->optv.opt.isset);
+  CU_ASSERT_EQUAL(strlen(optionlist->head->next->option->optv.valuename), 0);
+  CU_ASSERT_EQUAL(strlen(optionlist->head->next->option->optv.value), 0);
+  cclap_optionlist_destroy(&optionlist);
+}
+
+void optionlist_destroy_TTP() {
+  optionlist_t* optionlist;
+  optionlist = cclap_optionlist_new();
+  CU_ASSERT_PTR_NOT_NULL(optionlist);
+  cclap_optionlist_destroy(&optionlist);
+  CU_ASSERT_PTR_NULL(optionlist);
+}
+
+void optionlist_empty_TTP() {
+  option_t* option;
+  optionlist_t* optionlist;
+  optionlist = cclap_optionlist_new();
+  // On an empty list
+  CU_ASSERT_TRUE(cclap_optionlist_empty(optionlist));
+  // On a list of 2 options
+  option = cclap_soption_new('v', NULL, NULL);
+  cclap_optionlist_add(optionlist, option);
+  FREE(option);
+  CU_ASSERT_FALSE(cclap_optionlist_empty(optionlist));
+  cclap_optionlist_destroy(&optionlist);
+}
+
+void optionlist_get_TTP() {
+  option_t* option;
+  optionlist_t* optionlist;
+  optionlist = cclap_optionlist_new();
+  // Add 3 options
+  option = cclap_soption_new('v', NULL, NULL);
+  cclap_optionlist_add(optionlist, option);
+  FREE(option);
+  option = cclap_soption_new(0, "verbose", NULL);
+  cclap_optionlist_add(optionlist, option);
+  FREE(option);
+  option = cclap_optionval_new('s', "size", NULL, NULL);
+  cclap_optionlist_add(optionlist, option);
+  FREE(option);
+  // Get the options
+  option = cclap_optionlist_get(optionlist, 'v', NULL);
+  CU_ASSERT_PTR_NOT_NULL(option);
+  CU_ASSERT_EQUAL(option->opt.sname, 'v');
+  option = cclap_optionlist_get(optionlist, 0, "verbose");
+  CU_ASSERT_PTR_NOT_NULL(option);
+  CU_ASSERT_EQUAL(option->optv.opt.sname, 0);
+  CU_ASSERT_EQUAL(strcmp(option->optv.opt.lname, "verbose"), 0);
+  option = cclap_optionlist_get(optionlist, 's', "size");
+  CU_ASSERT_PTR_NOT_NULL(option);
+  CU_ASSERT_EQUAL(option->opt.sname, 's');
+  CU_ASSERT_EQUAL(strcmp(option->opt.lname, "size"), 0);
+  cclap_optionlist_destroy(&optionlist);
+}
+
+void optionlist_new_TTP() {
+  optionlist_t* optionlist;
+  optionlist = cclap_optionlist_new();
+  CU_ASSERT_PTR_NOT_NULL(optionlist);
+  CU_ASSERT_EQUAL(optionlist->size, 0);
+  CU_ASSERT_PTR_NULL(optionlist->head);
+  CU_ASSERT_PTR_NULL(optionlist->tail);
+  cclap_optionlist_destroy(&optionlist);
+}
+
+void optionlist_size_TTP() {
+  option_t* option;
+  optionlist_t* optionlist;
+  optionlist = cclap_optionlist_new();
+  // On an empty list
+  CU_ASSERT_EQUAL(cclap_optionlist_size(optionlist), 0);
+  // On a list of 2 options
+  option = cclap_soption_new('v', NULL, NULL);
+  cclap_optionlist_add(optionlist, option);
+  FREE(option);
+  option = cclap_soption_new('s', NULL, NULL);
+  cclap_optionlist_add(optionlist, option);
+  FREE(option);
+  CU_ASSERT_EQUAL(cclap_optionlist_size(optionlist), 2);
+  cclap_optionlist_destroy(&optionlist);
+}
+
+/*
+ ********************************
+ * Test-to-fail
+ ********************************
+ */
+void optionlist_add_TTF() {
+  optionlist_t* optionlist;
+  option_t* option;
+  // NULL optionlist
+  option = cclap_soption_new('v', NULL, NULL);
+  CU_ASSERT_FALSE(cclap_optionlist_add(NULL, option));
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
+  FREE(option);
+  // NULL option
+  optionlist = cclap_optionlist_new();
+  CU_ASSERT_FALSE(cclap_optionlist_add(optionlist, NULL));
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
+  //cclap_optionlist_destroy(&optionlist);
+}
+
+void optionlist_destroy_TTF() {
+  optionlist_t* optionlist = NULL;
+  // NULL optionlist
+  cclap_optionlist_destroy(&optionlist);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
+  cclap_optionlist_destroy(NULL);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
+}
+
+void optionlist_empty_TTF() {
+  CU_ASSERT_EQUAL(cclap_optionlist_empty(NULL), -1);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
+}
+
+void optionlist_get_TTF() {
+  CU_ASSERT_PTR_NULL(cclap_optionlist_get(NULL, 0, NULL));
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
+}
+
+void optionlist_size_TTF() {
+  CU_ASSERT_EQUAL(cclap_optionlist_size(NULL), -1);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
+}
 
 /*
  ********************************************************
@@ -504,6 +663,30 @@ int main(void) {
       CU_add_test(pSuite, "soption_new_TTP", soption_new_TTP) == NULL ||
       CU_add_test(pSuite, "optionval_new_TTF", optionval_new_TTF) == NULL ||
       CU_add_test(pSuite, "soption_new_TTF", soption_new_TTF) == NULL) {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
+
+  /*
+   *********************************
+   * OptionList suite
+   *********************************
+   */
+  pSuite = CU_add_suite("OptionList", init_suite, clean_suite);
+  if (pSuite == NULL) {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
+  if (CU_add_test(pSuite, "optionlist_add_TTP", optionlist_add_TTP) == NULL ||
+      CU_add_test(pSuite, "optionlist_add_TTF", optionlist_add_TTF) == NULL ||
+      CU_add_test(pSuite, "optionlist_destroy_TTP", optionlist_destroy_TTP) == NULL ||
+      CU_add_test(pSuite, "optionlist_destroy_TTF", optionlist_destroy_TTF) == NULL ||
+      CU_add_test(pSuite, "optionlist_empty_TTP", optionlist_empty_TTP) == NULL ||
+      CU_add_test(pSuite, "optionlist_empty_TTF", optionlist_empty_TTF) == NULL ||
+      CU_add_test(pSuite, "optionlist_get_TTP", optionlist_get_TTP) == NULL ||
+      CU_add_test(pSuite, "optionlist_get_TTF", optionlist_get_TTF) == NULL ||
+      CU_add_test(pSuite, "optionlist_size_TTP", optionlist_size_TTP) == NULL ||
+      CU_add_test(pSuite, "optionlist_size_TTF", optionlist_size_TTF) == NULL) {
     CU_cleanup_registry();
     return CU_get_error();
   }
