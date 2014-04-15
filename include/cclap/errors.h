@@ -15,7 +15,8 @@ typedef enum {
   CCLAP_ERR_DUPOPT, // Duplicated option (in optionlist)
   CCLAP_ERR_BADSNAME, // Bad short name
   CCLAP_ERR_BADLNAME, // Bad long name
-  CCLAP_ERR_NONAMES // No names (short or long)
+  CCLAP_ERR_NONAMES, // No names (short or long)
+  CCLAP_ERR_PARS // Parsing error
 } cclap_err_t;
 
 // CCLAP error number

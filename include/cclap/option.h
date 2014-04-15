@@ -3,6 +3,10 @@
 
 #include "cclap/core.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
   SOPTION = 0, // Simple option (soption_t)
   OPTIONVAL // Option with value (optionval_t)
@@ -121,5 +125,9 @@ option_t* cclap_optionval_new(char sname, char* lname, char* helpmsg, char* valu
  * On error, returns NULL and "cclap_errno" is set appropriately.
  */
 option_t* cclap_soption_new(char sname, char* lname, char* helpmsg);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // OPTION_H

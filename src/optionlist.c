@@ -75,20 +75,37 @@ int cclap_optionlist_empty(optionlist_t* list) {
 }
 
 
-option_t* cclap_optionlist_get(optionlist_t* list, char sname, char* lname) {
-  char* lname_tmp;
+option_t* cclap_optionlist_getbylname(optionlist_t* list, char* lname) {
   if (list == NULL) {
     cclap_errno = CCLAP_ERR_NULLVALUE;
     return NULL;
   }
+  if (lname == NULL) {
+    cclap_errno = CCLAP_ERR_BADLNAME;
+    return NULL;
+  }
   cclap_errno = CCLAP_SUCCESS;
   CCLAP_OPTIONLIST_FOREACH(list, {
-      if (cclap_option_sname(option) == sname) {
-	lname_tmp = cclap_option_lname(option);
-	if ((lname == NULL && strlen(lname_tmp) == 0) ||
-	    (lname != NULL && strcmp(lname_tmp, lname) == 0))
-	  return option;
-      }
+      if (strcmp(cclap_option_lname(option), lname) == 0)
+	return option;
+    });
+  return NULL;
+}
+
+
+option_t* cclap_optionlist_getbysname(optionlist_t* list, char sname) {
+  if (list == NULL) {
+    cclap_errno = CCLAP_ERR_NULLVALUE;
+    return NULL;
+  }
+  if (sname == 0) {
+    cclap_errno = CCLAP_ERR_BADSNAME;
+    return NULL;
+  }
+  cclap_errno = CCLAP_SUCCESS;
+  CCLAP_OPTIONLIST_FOREACH(list, {
+      if (cclap_option_sname(option) == sname)
+	return option;
     });
   return NULL;
 }

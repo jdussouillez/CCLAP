@@ -54,11 +54,18 @@ void cclap_optionlist_destroy(optionlist_t** list);
 int cclap_optionlist_empty(optionlist_t* list);
 
 /*
- * Returns a pointer to an option identified by its short and long name.
+ * Returns a pointer to an option identified by its long name.
  * Returns NULL if the option is not found.
  * On error, returns NULL and "cclap_errno" is set appropriately.
  */
-option_t* cclap_optionlist_get(optionlist_t* list, char sname, char* lname);
+option_t* cclap_optionlist_getbylname(optionlist_t* list, char* lname);
+
+/*
+ * Returns a pointer to an option identified by its short name.
+ * Returns NULL if the option is not found.
+ * On error, returns NULL and "cclap_errno" is set appropriately.
+ */
+option_t* cclap_optionlist_getbysname(optionlist_t* list, char sname);
 
 /*
  * Creates a new list.

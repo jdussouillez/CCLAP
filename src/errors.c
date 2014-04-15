@@ -12,10 +12,11 @@ static const char* cclap_errmsg[] = {"Success",
 				     "Try to insert a duplicated option in list",
 				     "Bad short name",
 				     "Bad long name",
-				     "No names"};
+				     "No names",
+				     "Parsing error"};
 
 const char* cclap_strerror(int errnum) {
-  if (errnum < 0 || errnum > 6)
+  if (errnum < 0 || errnum > 7)
     return NULL;
   return (errnum == CCLAP_ERR_SYSTEM) ? strerror(errno) : cclap_errmsg[errnum];
 }

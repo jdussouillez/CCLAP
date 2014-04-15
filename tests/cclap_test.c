@@ -5,6 +5,7 @@
 #include "cclap/errors.h"
 #include "cclap/option.h"
 #include "cclap/optionlist.h"
+#include "cclap/parser.h"
 
 #include "CUnit/Basic.h"
 
@@ -21,6 +22,43 @@ int init_suite(void) {
 
 int clean_suite(void) {
   return 0;
+}
+
+static optionlist_t* _create(void) {
+  optionlist_t* optionlist;
+  option_t* option;
+  optionlist = cclap_optionlist_new();
+
+  // Simple options
+  option = cclap_soption_new('v', "verbose", "expain what is being done");
+  cclap_optionlist_add(optionlist, option);
+  FREE(option);
+
+  option = cclap_soption_new(0, "version", "output version and exit");
+  cclap_optionlist_add(optionlist, option);
+  FREE(option);
+
+  option = cclap_soption_new('n', NULL, "numer all output lines");
+  cclap_optionlist_add(optionlist, option);
+  FREE(option);
+
+  // Options with value
+  option = cclap_optionval_new('c', "color", "colorize the output", "COLOR_NAME");
+  cclap_optionlist_add(optionlist, option);
+  FREE(option);
+  return optionlist;
+}
+
+static void _reset(optionlist_t* optionlist) {
+  CCLAP_OPTIONLIST_FOREACH(optionlist, {
+      if (option->type == SOPTION) {
+	option->opt.isset = 0;
+      }
+      else {
+	option->optv.opt.isset = 0;
+	memset(option->optv.value, 0, sizeof(option->optv.value));
+      }
+    });
 }
 
 /*
@@ -523,32 +561,31 @@ void optionlist_empty_TTP() {
   cclap_optionlist_destroy(&optionlist);
 }
 
-void optionlist_get_TTP() {
+void optionlist_getbylname_TTP() {
   option_t* option;
   optionlist_t* optionlist;
-  optionlist = cclap_optionlist_new();
-  // Add 3 options
-  option = cclap_soption_new('v', NULL, NULL);
-  cclap_optionlist_add(optionlist, option);
-  FREE(option);
   option = cclap_soption_new(0, "verbose", NULL);
+  optionlist = cclap_optionlist_new();
   cclap_optionlist_add(optionlist, option);
   FREE(option);
-  option = cclap_optionval_new('s', "size", NULL, NULL);
+  option = cclap_optionlist_getbylname(optionlist, "verbose");
+  CU_ASSERT_PTR_NOT_NULL(option);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_SUCCESS);
+  CU_ASSERT_EQUAL(strcmp(cclap_option_lname(option), "verbose"), 0);
+  cclap_optionlist_destroy(&optionlist);
+}
+
+void optionlist_getbysname_TTP() {
+  option_t* option;
+  optionlist_t* optionlist;
+  option = cclap_soption_new('v', NULL, NULL);
+  optionlist = cclap_optionlist_new();
   cclap_optionlist_add(optionlist, option);
   FREE(option);
-  // Get the options
-  option = cclap_optionlist_get(optionlist, 'v', NULL);
+  option = cclap_optionlist_getbysname(optionlist, 'v');
   CU_ASSERT_PTR_NOT_NULL(option);
-  CU_ASSERT_EQUAL(option->opt.sname, 'v');
-  option = cclap_optionlist_get(optionlist, 0, "verbose");
-  CU_ASSERT_PTR_NOT_NULL(option);
-  CU_ASSERT_EQUAL(option->optv.opt.sname, 0);
-  CU_ASSERT_EQUAL(strcmp(option->optv.opt.lname, "verbose"), 0);
-  option = cclap_optionlist_get(optionlist, 's', "size");
-  CU_ASSERT_PTR_NOT_NULL(option);
-  CU_ASSERT_EQUAL(option->opt.sname, 's');
-  CU_ASSERT_EQUAL(strcmp(option->opt.lname, "size"), 0);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_SUCCESS);
+  CU_ASSERT_EQUAL(cclap_option_sname(option), 'v');
   cclap_optionlist_destroy(&optionlist);
 }
 
@@ -621,15 +658,125 @@ void optionlist_empty_TTF() {
   CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
 }
 
-void optionlist_get_TTF() {
-  CU_ASSERT_PTR_NULL(cclap_optionlist_get(NULL, 0, NULL));
+void optionlist_getbylname_TTF() {
+  optionlist_t* optionlist;
+  CU_ASSERT_PTR_NULL(cclap_optionlist_getbylname(NULL, "verbose"));
   CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
+  optionlist = cclap_optionlist_new();
+  CU_ASSERT_PTR_NULL(cclap_optionlist_getbylname(optionlist, NULL));
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_BADLNAME);
+  cclap_optionlist_destroy(&optionlist);
+}
+
+void optionlist_getbysname_TTF() {
+  optionlist_t* optionlist;
+  CU_ASSERT_PTR_NULL(cclap_optionlist_getbysname(NULL, 'v'));
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
+  optionlist = cclap_optionlist_new();
+  CU_ASSERT_PTR_NULL(cclap_optionlist_getbysname(optionlist, 0));
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_BADSNAME);
+  cclap_optionlist_destroy(&optionlist);
 }
 
 void optionlist_size_TTF() {
   CU_ASSERT_EQUAL(cclap_optionlist_size(NULL), -1);
   CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
 }
+
+
+/*
+***********************************************
+ ***************** Parser suite ****************
+ ***********************************************
+ */
+/*
+ ********************************
+ * Test-to-pass
+ ********************************
+ */
+void parser_TTP() {
+  char* argv1[] = {"./myprog", "--verbose", "-nc", "RED", "file1", "file2"};
+  int size = 256, firstnonoptionarg;
+  char logstr[size];
+  option_t* option;
+  optionlist_t* optionlist = _create();
+
+  firstnonoptionarg = cclap_parse(optionlist, 5, argv1, logstr, size);
+  CU_ASSERT_EQUAL(firstnonoptionarg, 4);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_SUCCESS);
+  option = cclap_optionlist_getbylname(optionlist, "verbose");
+  CU_ASSERT_TRUE(cclap_option_isset(option));
+  option = cclap_optionlist_getbysname(optionlist, 'n');
+  CU_ASSERT_TRUE(cclap_option_isset(option));
+  option = cclap_optionlist_getbysname(optionlist, 'c');
+  CU_ASSERT_TRUE(cclap_option_isset(option));
+  CU_ASSERT_EQUAL(strcmp(cclap_option_value(option), "RED"), 0);
+
+  cclap_optionlist_destroy(&optionlist);
+}
+
+/*
+ ********************************
+ * Test-to-pass
+ ********************************
+ */
+void parser_TTF() {
+  char* argv1[] = {"./myprog", "-", "file1", "file2"};
+  char* argv2[] = {"./myprog", "--verbose", "--test"};
+  char* argv3[] = {"./myprog", "--color"};
+  char* argv4[] = {"./myprog", "--verbose=true"};
+  int size = 256, firstnonoptionarg;
+  char logstr[size];
+  option_t* option;
+  optionlist_t* optionlist = _create();
+
+  // NULL optionlist
+  firstnonoptionarg = cclap_parse(NULL, 0, argv1, logstr, size);
+  CU_ASSERT_EQUAL(firstnonoptionarg, -2);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
+
+  // NULL parameters
+  firstnonoptionarg = cclap_parse(optionlist, 0, NULL, logstr, size);
+  CU_ASSERT_EQUAL(firstnonoptionarg, -2);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
+
+  // NULL log string
+  firstnonoptionarg = cclap_parse(optionlist, 0, argv1, NULL, size);
+  CU_ASSERT_EQUAL(firstnonoptionarg, -2);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_NULLVALUE);
+
+  // Invalid token "-"
+  firstnonoptionarg = cclap_parse(optionlist, 4, argv1, logstr, size);
+  CU_ASSERT_EQUAL(firstnonoptionarg, -1);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_PARS);
+  CU_ASSERT_EQUAL(strcmp(logstr, "invalid option -- '-'"), 0);
+
+  // Invalid long option
+  firstnonoptionarg = cclap_parse(optionlist, 3, argv2, logstr, size);
+  CU_ASSERT_EQUAL(firstnonoptionarg, -1);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_PARS);
+  option = cclap_optionlist_getbylname(optionlist, "verbose");
+  CU_ASSERT_TRUE(cclap_option_isset(option));
+  _reset(optionlist);
+  CU_ASSERT_EQUAL(strcmp(logstr, "invalid option -- 'test'"), 0);
+
+  // Long option, required argument not found
+  firstnonoptionarg = cclap_parse(optionlist, 2, argv3, logstr, size);
+  CU_ASSERT_EQUAL(firstnonoptionarg, -1);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_PARS);
+  option = cclap_optionlist_getbylname(optionlist, "color");
+  CU_ASSERT_EQUAL(strcmp(logstr, "option 'color' requires an argument"), 0);
+  
+  // Long option, unexpected argument
+  firstnonoptionarg = cclap_parse(optionlist, 2, argv4, logstr, size);
+  CU_ASSERT_EQUAL(firstnonoptionarg, -1);
+  CU_ASSERT_EQUAL(cclap_errno, CCLAP_ERR_PARS);
+  option = cclap_optionlist_getbylname(optionlist, "verbose");
+  CU_ASSERT_EQUAL(strcmp(logstr, "option 'verbose' does not require an argument"), 0);
+
+  cclap_optionlist_destroy(&optionlist);
+}
+
 
 /*
  ********************************************************
@@ -691,10 +838,28 @@ int main(void) {
       CU_add_test(pSuite, "optionlist_destroy_TTF", optionlist_destroy_TTF) == NULL ||
       CU_add_test(pSuite, "optionlist_empty_TTP", optionlist_empty_TTP) == NULL ||
       CU_add_test(pSuite, "optionlist_empty_TTF", optionlist_empty_TTF) == NULL ||
-      CU_add_test(pSuite, "optionlist_get_TTP", optionlist_get_TTP) == NULL ||
-      CU_add_test(pSuite, "optionlist_get_TTF", optionlist_get_TTF) == NULL ||
+      CU_add_test(pSuite, "optionlist_getbylname_TTP", optionlist_getbylname_TTP) == NULL ||
+      CU_add_test(pSuite, "optionlist_getbylname_TTF", optionlist_getbylname_TTF) == NULL ||
+      CU_add_test(pSuite, "optionlist_getbysname_TTP", optionlist_getbysname_TTP) == NULL ||
+      CU_add_test(pSuite, "optionlist_getbysname_TTF", optionlist_getbysname_TTF) == NULL ||
       CU_add_test(pSuite, "optionlist_size_TTP", optionlist_size_TTP) == NULL ||
       CU_add_test(pSuite, "optionlist_size_TTF", optionlist_size_TTF) == NULL) {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
+
+  /*
+   *********************************
+   * Parser suite
+   *********************************
+   */
+  pSuite = CU_add_suite("Parser", init_suite, clean_suite);
+  if (pSuite == NULL) {
+    CU_cleanup_registry();
+    return CU_get_error();
+  }
+  if (CU_add_test(pSuite, "parser_TTP", parser_TTP) == NULL ||
+      CU_add_test(pSuite, "parser_TTF", parser_TTF) == NULL) {
     CU_cleanup_registry();
     return CU_get_error();
   }
